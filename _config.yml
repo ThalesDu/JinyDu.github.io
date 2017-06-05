@@ -1,0 +1,48 @@
+# Basic
+title: Jiny's Blog
+subtitle: 那些没能杀死我的，使我更坚强
+welcome_message: Hi，我是杜俊宇(@Jiny),是一名iOS开发着，暂居北京，享受开发之乐.
+description: 这里是我记录生活，感悟技术的地方，欢迎你的访问.
+creator: <a href="http://thalesdu.github.io">@Jiny</a>
+
+url: "http://thalesdu.github.io"
+
+permalink: /:year/:month/:title/
+favicon: assets/images/avatar.jpg
+
+# Format
+highlighter: rouge
+
+# supported colors: blue, green, purple, red, orange or slate. If you need clear, leave it empty.
+cover_color: slate
+
+# The blog button should not be removed.
+blog_button:
+    title: Blog
+    description: Visit blog
+
+# Navigation buttons in the front page.
+nav:
+    #- {title: Tags, description: My Tags, url: 'http://project.onevcat.com'}
+    # - {title: Another Button, description: A button, url: 'http://example.com'}
+
+# Pagination
+gems: [jekyll-paginate]
+paginate: 10
+paginate_path: "page/:num/"
+
+# Comment
+#comment:
+ #   disqus: vno-jekyll
+    # duoshuo: 
+    
+# Social
+social:
+    weibo: MEBKB_Jiny
+    github: ThalesDu
+    mail: jy_root@163.com
+
+# Google Analytics
+ga:
+    # id: your_ga_id
+    # host: your_host

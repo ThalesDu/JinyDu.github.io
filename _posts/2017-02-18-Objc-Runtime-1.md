@@ -1,21 +1,19 @@
 ---
 layout: post
-title: Objc Runtime - 类对象和消息
+title: Objc Runtime - 类对象
 date: 2017-02-18
 categories: blog
 tags: [iOS,Objc-Runtime]
 ---
-
-# Objc Runtime - 类对象和消息
-
->Objc是一门极其动态的语言，他的调用都是通过消息机制。
-
 本节讨论的问题：
-
-* 消息的接受者是什么？是对象本身吗？
+* 类对象的结构
+* 编译之后类对象变成了什么样？
+* id类型是什么；
 * 运行期系统如何知道某个对象的类型？
+* id，NSObject *, id<NSObject>三者的区别和联系。
 
-##is a指针
+## is a指针
+
 Objc的对象类型并非在编译期就绑定好了，而是要在运行期查找。一般情况下，我们会指明接受信息的对象类型，这样做如果出现该对象无法响应
 的消息，编译器可以产生警告信息⚠️。
 而id类型的对象则不然，编译器假定他们响应所有的消息。
@@ -111,7 +109,8 @@ struct class_ro_t {
 };
  ```
 
-##推演
+## 推演
+
 到此我们可以得出一个结论，每一个实例对象都从`NSObject`中继承了一个叫做`isa`的指针变量。指向一个`obj_class` 的结构体。结构体中可以的：
 
 * `superClass`父类；
@@ -146,9 +145,10 @@ struct __class_ro_t{
 
 ```
 假设有2个`Person`的实例，`personA`和`personB`，这2个实例都有一个isa指针了;指向的是同一个`__class_t`的结构体。这个`__class_t`的结构体在**编译**的时候产生，包含了对象具有的：`method_list_t`,`protocol_list_t`、`ivar_list_t`, `property_list_t`这些信息。
-调用放啊的时候，比如`[personA hello]`,通过`personA `的`isa`变量在`__class_t`结构体中找对应的方法实现，`[personB hello]` 也是如此的过程。（消息发送和接受过程）。
+调用放啊的时候，比如`[personA hello]`,通过`personA `的`isa`变量在`__class_t`结构体中找对应的方法实现，`[personB hello]` 也是如此的过程。（消息的传递机制）。
 
-##元类（MetaClass）
+## 元类（MetaClass）
+
 现在还存在2问题：
 
 * 类如何去响应类方法；
@@ -169,13 +169,62 @@ struct __class_ro_t{
 梳理一下：
 存在某个类的实例`Instance`它包含一个`isa`指针,这个指针指向它的类结构`Class`,可以查询到他的实例方法列表。`Class`这个结构体也包含一个`isa`指针，指向`MetaClass`，可以查询类方法
 
-**类对象 `Class Object` 表明了这个类的所具有的实例变量，实例方法、遵循的协议等等信息**
+**类对象 `Class Object` 表明了这个类的所具有的实例变量，实例方法、遵循的协议等等信息**<br>
 **元类对象 `MetaClass Object` 表明这个类所具有的类方法等信息。**
-![objctree-w300](file://./media/objctree.png)
+![objctree-w600](/assets/resources/objCRuntime/objctree.png)
 
 
 所以isa不会是nil的；只要有一个 id 类型的对象，runtime都可以访问首地址偏移`isa`拿到该对象的信息。
 绿色的线时响应消息的过程。如果没有找到会沿着`superClass`一直向上找。
 ##使用Clang观察rewrite之后文件。
 在工程中调用 `clang -rewrite-objc person.m`, 会在工程中生成一个`person.cpp`的文件,在最后可以这些信息。
+
+## NSObject*  |  id 之间的区别以及联系
+
+写到这里有一个疑问：id既然可以表示所有 Objc 类的对象，NSObject又是Objc中类的基类 (一般情况下)，那他们有什么区别呢。
+
+我们引入3个东西来比较：
+
+```objc
+id foo1;
+NSObject *foo2;
+id<NSObject> *foo3;
+```
+
+* id:
+     它可以指向的类型不仅限于NSObject
+    id 我们经常看到运用的地方莫过于
+    @property (nonatomic, weak, nullable) id delegate;
+    `id`对象对于编译器来说只意味着一个指向对象的指针，具体指向什么对象编译器并不知道，所以向id对象发送任何消息编译器都不会报错。
+    
+    ```objc
+    @interface Foo:Objcet
+    @end
+    @implementation Foo
+    @end
+    
+    id foo = [[Foo alloc] init];
+    [foo say];
+    ```
+其中alloc方法返回的就是一个 id 对象所以无论发什么消息都不会报错。
+* NSObject*
+    而id指向的对象不都是NSObject的子类，e.g.`NSProxy`。
+    **当我们指定一个类是NSObject的实例的时候，如果我们调用的方法没有在`NSObjcet`中定义编译器就会果断报错**。
+    
+* id<NSObjcet>
+    id<NSObject> 相当于告诉编译器，你不需要知道我是什么对象，你只需要知道我遵循了`<NSObject>`协议，编译器就能保证赋值给id<NSObject>的对象都是遵循`<NSObject>`。而对于`NSObject`、`NSProxy`都遵循了`<NSObject>`协议。保证了接口的统一性。
+###id & instancetype
+注意：引用Clang中的一句话。
+
+>"instancetype is a contextual keyword that is only permitted in the result type >of an Objective-C method"
+>
+>http://clang.llvm.org/docs/LanguageExtensions.html Clang Language Extensions
+
+如上所说 `instancetype` 只是一个上下文环境的关键字。编译器有了它就可以有足够的类型信息检查某个类是否可以响应某些方法；
+
+
+
+
+
+
 
